@@ -33,15 +33,19 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Configure Android SDK
-        run: |
-          echo "ANDROID_HOME=$ANDROID_SDK_ROOT" >> "$GITHUB_ENV"
-          echo "$ANDROID_SDK_ROOT/platform-tools" >> "$GITHUB_PATH"
-
       - name: Install Android SDK 34
         run: |
-          yes | sdkmanager --licenses || true
-          sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+          SDK_DIR="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          echo "SDK dir: $SDK_DIR"
+          SDKM=$(find "$SDK_DIR" /usr/local/lib/android -name sdkmanager -type f 2>/dev/null | head -n 1)
+          echo "sdkmanager: $SDKM"
+          if [ -n "$SDKM" ]; then
+            yes | "$SDKM" --licenses > /dev/null || true
+            "$SDKM" "platforms;android-34" "build-tools;34.0.0" || true
+          else
+            echo "sdkmanager not found, using the SDK preinstalled on the runner"
+          fi
+          ls "$SDK_DIR/platforms" || true
 
       - name: Locate Gradle project
         run: |
