@@ -18,18 +18,13 @@ jobs:
       - name: Find and extract ZIP
         run: |
           ZIP_FILE=$(find . -maxdepth 2 -iname "MediaVault.zip" -print -quit)
-
           if [ -z "$ZIP_FILE" ]; then
             echo "ERROR: MediaVault.zip not found!"
-            echo "Files in repository:"
             find . -maxdepth 3 -type f
             exit 1
           fi
-
           mkdir -p project
           unzip -q "$ZIP_FILE" -d project
-
-          echo "Extracted project files:"
           ls -la project
 
       - name: Set up JDK 17
@@ -40,45 +35,32 @@ jobs:
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
-        with:
-          packages: ''
-          cmdline-tools-version: 12266719
-          
+
       - name: Install Android SDK 34
         run: |
-          sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
           yes | sdkmanager --licenses || true
+          sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
 
       - name: Locate Gradle project
         run: |
-          GRADLE_FILE=$(find project -name settings.gradle -o -name settings.gradle.kts | head -n 1)
-
+          GRADLE_FILE=$(find project \( -name settings.gradle -o -name settings.gradle.kts \) | head -n 1)
           if [ -z "$GRADLE_FILE" ]; then
             echo "ERROR: No Gradle settings file found."
-            echo "The ZIP may contain an unexpected folder structure."
             find project -maxdepth 5 -type f | head -200
             exit 1
           fi
-
           PROJECT_DIR=$(dirname "$GRADLE_FILE")
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
           echo "Gradle project: $PROJECT_DIR"
 
-            - name: Set up Gradle
+      - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.7
 
       - name: Build debug APK
-        run: |
-          cd "$PROJECT_DIR"
-
-          if [ -f gradlew ]; then
-            chmod +x gradlew
-            ./gradlew assembleDebug --stacktrace
-          else
-            echo "Gradle wrapper missing. Trying installed Gradle..."
-            gradle --version
-            gradle assembleDebug --stacktrace
-          fi
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: gradle assembleDebug --stacktrace --no-daemon
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
