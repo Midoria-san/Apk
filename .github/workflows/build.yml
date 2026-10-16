@@ -64,6 +64,9 @@ jobs:
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
           echo "Gradle project: $PROJECT_DIR"
 
+            - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
       - name: Build debug APK
         run: |
           cd "$PROJECT_DIR"
@@ -72,9 +75,9 @@ jobs:
             chmod +x gradlew
             ./gradlew assembleDebug --stacktrace
           else
-            echo "ERROR: gradlew is missing from the project."
-            echo "A Gradle wrapper is required to build this project."
-            exit 1
+            echo "Gradle wrapper missing. Trying installed Gradle..."
+            gradle --version
+            gradle assembleDebug --stacktrace
           fi
 
       - name: Upload APK
